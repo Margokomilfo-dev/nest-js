@@ -7,7 +7,7 @@ import { BlogsModule } from './modules/blogs/blogs.module';
 
 @Module({
   imports: [
-    MongooseModule.forRoot(`mongodb://localhost:27017/blogs-platform`),
+    MongooseModule.forRoot(process.env.MONGO_URI),
     PostsModule,
     BlogsModule,
   ],
