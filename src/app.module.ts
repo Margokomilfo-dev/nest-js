@@ -4,9 +4,13 @@ import { AppService } from './app.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { PostsModule } from './modules/posts/posts.module';
 import { BlogsModule } from './modules/blogs/blogs.module';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      envFilePath: ['.env.development.local', '.env.development'],
+    }),
     MongooseModule.forRoot(process.env.MONGO_URI),
     PostsModule,
     BlogsModule,
