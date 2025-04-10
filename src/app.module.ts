@@ -23,6 +23,7 @@ const configModules = [
     ...configModules,
     MongooseModule.forRootAsync({
       useFactory: (appConfigService: AppConfigService) => {
+        console.log(appConfigService);
         return {
           uri: appConfigService.MONGO_URI, //что бы appConfigService не был undefined, мы его инжектим ниже
         };

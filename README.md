@@ -272,4 +272,36 @@ export class AppModule {}
 
 <b>end commit</b> #Part-2 настройка конфигурационного модуля
 
+<b>end commit</b> #Part-2 настройка конфигурационного модуля
+
+<b>end commit</b> #Part-3 настройка конфигурационного модуля
+
+---
+Подключение конфигурационного модуля во время сборки.
+Так как при сборке на хостинге идет запуск приложения из dist... переменные .env не попадут и на этапе сборки приложение упадет.
+Поэтому все энвайроманты мы перенесем в отдельную папку env в src (/core)
+
+в файлк nest-cli.json добавляем настройки
+```javascript
+ "compilerOptions": {
+    "deleteOutDir": true,
+    "assets": [
+      { "include": "**/env/*.env*","watchAssets": true}
+    ]
+  }
+```
+в файле core-config-env-settings.ts
+```javascript
+export const configModule = ConfigModule.forRoot({
+  envFilePath: [
+    process.env.ENV_FILE_PATH?.trim() || '',
+    join(__dirname, '..', 'env', `.env.${process.env.NODE_ENV}.local`),
+    join(__dirname, '..', 'env', `.env.${process.env.NODE_ENV}`), // и могут быть переопределены выше стоящими файлами
+  ],
+  isGlobal: true,
+});
+```
+
+<b>end commit</b> #Part-3 настройка конфигурационного модуля
+
 ---
