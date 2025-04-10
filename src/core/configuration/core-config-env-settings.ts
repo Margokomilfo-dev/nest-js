@@ -8,7 +8,7 @@ export enum Environments {
   TESTING = 'testing',
 }
 
-export const configurationEnvSettings = ConfigModule.forRoot({
+export const coreConfigEnvSettings = ConfigModule.forRoot({
   envFilePath: [
     process.env.ENV_FILE_PATH?.trim(), //приоритет 3 перезатрет вне нижние
     `.env.${process.env.NODE_ENV}.local`, //приоритет 2 перезатрет вне нижние

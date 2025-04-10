@@ -132,14 +132,24 @@ export class ConfigurationService {
 ```
 Инжектим его в провайдеры app.module и теперь пользуемся им как вспомагатором
 
-например 
+например
+
 ```javascript
+
 @Controller()
 export class AppController {
-  constructor(private readonly configService: ConfigurationService) {}
+  constructor(private
+
+  readonly
+  onfigService: PostsConfigService
+) {
+}
 
 @Get()
-getHello(): any {
+getHello()
+:
+any
+{
   return {
     port: this.configService.PORT,
     mongo_uri: this.configService.MONGO_URI,
@@ -152,7 +162,7 @@ getHello(): any {
 Но.. у нас есть app... а в несте у этого app можно с ioc достать все что нам нужно
 
 ```javascript
-const appConfig = app.get(ConfigurationService);
+const appConfig = app.get(PostsConfigService);
 console.log(appConfig.PORT)
 ```
 
@@ -162,13 +172,13 @@ console.log(appConfig.PORT)
 
 @Module({
   imports: [
-    configurationEnvSettings,
+    coreConfigEnvSettings,
     MongooseModule.forRoot(process.env.MONGO_URI),
     PostsModule,
     BlogsModule,
   ],
   controllers: [AppController],
-  providers: [AppService, ConfigurationService],
+  providers: [AppService, PostsConfigService],
 })
 export class AppModule {
 }
@@ -186,20 +196,20 @@ export class AppModule {
     // MongooseModule.forRoot(process.env.MONGO_URI), 
 
     MongooseModule.forRootAsync({
-      useFactory: (configurationService: ConfigurationService) => {
+      useFactory: (appConfigService: PostsConfigService) => {
         return {
-          uri: configurationService.MONGO_URI, //что бы configurationService не был undefined, мы его инжектим ниже
+          uri: appConfigService.MONGO_URI, //что бы PostsConfigService не был undefined, мы его инжектим ниже
         };
       },
-      inject: [ConfigurationService], //инжектим здесь
+      inject: [PostsConfigService], //инжектим здесь
     }),
-    configurationEnvSettings,
+    coreConfigEnvSettings,
     PostsModule,
     BlogsModule,
   ],
   controllers: [AppController],
-  providers: [AppService, ConfigurationService],
-  exports: [ConfigurationService], //так же нужно его экспортировать, чтобы он был всем дрступен. в том числе и монгус
+  providers: [AppService, PostsConfigService],
+  exports: [PostsConfigService], //так же нужно его экспортировать, чтобы он был всем дрступен. в том числе и монгус
 })
 export class AppModule {
 }
@@ -211,14 +221,14 @@ export class AppModule {
 
 ```javascript
 import { Global, Module } from '@nestjs/common';
-import { ConfigurationService } from './configuration.service';
+import { PostsConfigService } from './app-config.service';
 
 @Global()
 @Module({
-  providers: [ConfigurationService],
-  exports: [ConfigurationService],
+  providers: [PostsConfigService],
+  exports: [PostsConfigService],
 })
-export class ConfigurationModule {}
+export class PostsConfigModule {}
 
 ```
 
@@ -226,7 +236,7 @@ export class ConfigurationModule {}
 
 ```javascript
 //импорт этого модуля должен быть на самом верху! Для того, чтобы переменные окружения подгружались на самом старте запуска приложения
-import { configurationEnvSettings } from './core/config';
+import { coreConfigEnvSettings } from './core/config';
 
 import { Global, Module } from '@nestjs/common';
 import { AppController } from './app.controller';
@@ -234,21 +244,21 @@ import { AppService } from './app.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { PostsModule } from './modules/posts/posts.module';
 import { BlogsModule } from './modules/blogs/blogs.module';
-import { ConfigurationService } from './core/configuration.service';
-import { ConfigurationModule } from './core/configuration.module';
+import { PostsConfigService } from './core/configuration.service';
+import { PostsConfigModule } from './core/configuration.module';
 
 @Module({
   imports: [
-    ConfigurationModule,
+    PostsConfigModule,
     MongooseModule.forRootAsync({
-      useFactory: (configurationService: ConfigurationService) => {
+      useFactory: (appConfigService: PostsConfigService) => {
         return {
-          uri: configurationService.MONGO_URI, //что бы configurationService не был undefined, мы его инжектим ниже
+          uri: appConfigService.MONGO_URI, //что бы PostsConfigService не был undefined, мы его инжектим ниже
         };
       },
-      inject: [ConfigurationService], //инжектим здесь
+      inject: [PostsConfigService], //инжектим здесь
     }),
-    configurationEnvSettings,
+    coreConfigEnvSettings,
     PostsModule,
     BlogsModule,
   ],

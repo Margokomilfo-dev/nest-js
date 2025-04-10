@@ -1,15 +1,15 @@
 import { Controller, Get } from '@nestjs/common';
-import { ConfigurationService } from './core/configuration/configuration.service';
+import { AppConfigService } from './core/configuration/app/app-config.service';
 
-@Controller()
+@Controller('app')
 export class AppController {
-  constructor(private readonly configService: ConfigurationService) {}
+  constructor(private readonly appConfigService: AppConfigService) {}
 
   @Get()
   getHello(): any {
     return {
-      port: this.configService.PORT,
-      mongo_uri: this.configService.MONGO_URI,
+      port: this.appConfigService.PORT,
+      mongo_uri: this.appConfigService.MONGO_URI,
     };
   }
 }

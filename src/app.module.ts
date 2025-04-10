@@ -4,24 +4,31 @@ import { AppService } from './app.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { PostsModule } from './modules/posts/posts.module';
 import { BlogsModule } from './modules/blogs/blogs.module';
-import { ConfigurationModule } from './core/configuration/configuration.module';
-import { ConfigurationService } from './core/configuration/configuration.service';
-import { configurationEnvSettings } from './core/configuration/configuration-env-settings';
+import { coreConfigEnvSettings } from './core/configuration/core-config-env-settings';
+import { AppConfigModule } from './core/configuration/app/app-config.module';
+import { AppConfigService } from './core/configuration/app/app-config.service';
+import { BlogsConfigModule } from './core/configuration/blogs/blogs-config.module';
+import { PostsConfigModule } from './core/configuration/posts/posts-config.module';
 
+const configModules = [
+  coreConfigEnvSettings,
+  AppConfigModule,
+  BlogsConfigModule,
+  PostsConfigModule,
+];
 @Module({
   controllers: [AppController],
 
   imports: [
-    ConfigurationModule,
+    ...configModules,
     MongooseModule.forRootAsync({
-      useFactory: (configurationService: ConfigurationService) => {
+      useFactory: (appConfigService: AppConfigService) => {
         return {
-          uri: configurationService.MONGO_URI, //что бы configurationService не был undefined, мы его инжектим ниже
+          uri: appConfigService.MONGO_URI, //что бы appConfigService не был undefined, мы его инжектим ниже
         };
       },
-      inject: [ConfigurationService], //инжектим здесь
+      inject: [AppConfigService], //инжектим здесь
     }),
-    configurationEnvSettings,
     PostsModule,
     BlogsModule,
   ],
