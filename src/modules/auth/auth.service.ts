@@ -9,7 +9,7 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async signIn(username: string, pass: string) {
+  async signInWithJWT(username: string, pass: string) {
     const user = await this.usersService.findOne(username);
 
     if (user?.password !== pass) {
@@ -18,6 +18,16 @@ export class AuthService {
     const payload = { username: user.username, sub: user.userId };
     return {
       access_token: await this.jwtService.signAsync(payload),
+    };
+  }
+
+  async signInWithBasic(username: string, password: string) {
+    const base64 = Buffer.from(`${username}:${password}`).toString('base64');
+    const authorizationHeader = `Basic ${base64}`;
+
+    return {
+      message: 'Use this header in Authorization',
+      authorizationHeader,
     };
   }
 

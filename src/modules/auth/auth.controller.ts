@@ -14,7 +14,18 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Post('login')
-  signIn(@Body() signInDto: SignInDtoInput) {
-    return this.authService.signIn(signInDto.username, signInDto.password);
+  signInWithJWT(@Body() signInDto: SignInDtoInput) {
+    return this.authService.signInWithJWT(
+      signInDto.username,
+      signInDto.password,
+    );
+  }
+
+  @Post('basic-login')
+  signInWithBasic(@Body() signInDto: SignInDtoInput) {
+    return this.authService.signInWithBasic(
+      signInDto.username,
+      signInDto.password,
+    );
   }
 }

@@ -14,6 +14,7 @@ import { IsObject, IsString } from 'class-validator';
 import { LocalAuthGuard } from '../auth/guards/local-auth-guard/local-auth.guard';
 import { JwtStrategyAuthGuard } from '../auth/guards/jwt-auth-guard/jwt-strategy-auth.guard';
 import { JWTAuthGuard } from '../auth/guards/jwt-auth-guard/without-strategy/jwt-auth.guard';
+import { BasicStrategyAuthGuard } from '../auth/guards/basic-auth-guard/basic-auth.guard';
 
 class LoginInput {
   @IsString()
@@ -70,6 +71,12 @@ export class UsersController {
   @UseGuards(JwtStrategyAuthGuard)
   @Get('auth/login')
   async login2(@Request() req: UserRequestData): Promise<any> {
+    return req.user;
+  }
+
+  @UseGuards(BasicStrategyAuthGuard)
+  @Post('auth/basic-login')
+  async login3(@Request() req: UserRequestData): Promise<any> {
     return req.user;
   }
 }

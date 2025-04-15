@@ -488,6 +488,26 @@ export class JwtLocalAuthGuard extends AuthGuard('jwt') {}
 
 !!! НЕ ЗАБЫВАЕМ УСТАНАВЛИВАТЬ СООТВЕТСВУЮЩИЕ БИБЛ
 
-<b>end commit</b> #2) jwt-guard with strategy
+<b>end commit</b> #3) jwt-guard with strategy
 
 -- --
+### Создание BACIC AUTH гарда, который будет проверять токен СО СТРАТЕГИЕЙ 'basic'
+по аналогии с предыдущими случаями
+
+только в самой стратегии в validate функцию в параметры приходит первый параметр req
+```javascript
+  //basic.strategy.ts
+  async validate(
+      req: Request, //!!!!!!!!!!!!!!1
+      username: string,
+      password: string,
+    ): Promise<any> {
+      const user = await this.authService.validateUser(username, password);
+      if (!user) {
+      throw new UnauthorizedException();
+    }
+    return user;
+  }
+}
+```
+<b>end commit</b> #4) basic-guard with strategy
