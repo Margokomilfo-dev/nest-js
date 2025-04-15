@@ -9,11 +9,11 @@ import {
 import { AppConfigService } from '../../core/configuration/app/app-config.service';
 import { AuthConfigService } from '../../core/configuration/auth/auth-config.service';
 import { UsersService } from './users.service';
-import { JWTAuthGuard } from '../auth/guards/jwt-auth-guard/jwt-auth.guard';
 //import { Public } from '../auth/guards/decorators/public.decorator';
-import { AuthGuard } from '@nestjs/passport';
 import { IsObject, IsString } from 'class-validator';
 import { LocalAuthGuard } from '../auth/guards/local-auth-guard/local-auth.guard';
+import { JwtStrategyAuthGuard } from '../auth/guards/jwt-auth-guard/jwt-strategy-auth.guard';
+import { JWTAuthGuard } from '../auth/guards/jwt-auth-guard/without-strategy/jwt-auth.guard';
 
 class LoginInput {
   @IsString()
@@ -64,6 +64,12 @@ export class UsersController {
     @Body() data: LoginInput,
   ): Promise<any> {
     console.log(data);
+    return req.user;
+  }
+
+  @UseGuards(JwtStrategyAuthGuard)
+  @Get('auth/login')
+  async login2(@Request() req: UserRequestData): Promise<any> {
     return req.user;
   }
 }

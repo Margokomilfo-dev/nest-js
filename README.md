@@ -436,3 +436,58 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
 <b>end commit</b> #2) simple local-guard with strategy
 
 -- --
+### Создание JWT AUTH гарда, который будет проверять токен СО СТРАТЕГИЕЙ jwt
+т.к ранее уже был подключен import { JwtService } from '@nestjs/jwt';  и написана логика валидации и созданий accessToken, 
+то используем то, что у нас уже есть в AuthService
+
+```javascript
+async validateUser(username: string, pass: string): Promise<any> {...}
+async login(user: any) {
+  ...
+  return {
+    access_token: this.jwtService.sign(payload),
+  };
+}
+```
+- так же есть подклбченный AuthConfigService с переменными (secret)
+- в authModule подклбчен JwtModule
+1) создание jwt.strategy.ts
+```javascript
+import { ExtractJwt, Strategy } from 'passport-jwt';
+import { PassportStrategy } from '@nestjs/passport';
+import { Injectable } from '@nestjs/common';
+import { jwtConstants } from './constants';
+
+@Injectable()
+export class JwtStrategy extends PassportStrategy(Strategy) {
+  constructor() {
+    super({
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      ignoreExpiration: false,
+      secretOrKey: jwtConstants.secret,
+    });
+  }
+
+  async validate(payload: any) {
+    return { userId: payload.sub, username: payload.username };
+  }
+}
+```
+2) создание jwt-local-auth.guard.ts
+```javascript
+import { Injectable } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+
+@Injectable()
+export class JwtLocalAuthGuard extends AuthGuard('jwt') {}
+```
+3) Поключение стратегии в AuthModule 
+4) Использование Guard в контроллере
+
+Все аналогично local стратегии.
+
+!!! НЕ ЗАБЫВАЕМ УСТАНАВЛИВАТЬ СООТВЕТСВУЮЩИЕ БИБЛ
+
+<b>end commit</b> #2) jwt-guard with strategy
+
+-- --
