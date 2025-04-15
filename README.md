@@ -66,7 +66,7 @@ pnpm add @nestjs/config -D
     envFilePath: ['.env.development'],
   }),
   //MongooseModule.forRoot(process.env.MONGO_URI),
-  //PostsModule,
+  //UsersModule,
   //BlogsModule,
 ],
 ```
@@ -138,23 +138,15 @@ export class ConfigurationService {
 
 @Controller()
 export class AppController {
-  constructor(private
-
-  readonly
-  onfigService: PostsConfigService
-) {
-}
+  constructor(private readonly configService: PostsConfigService) {}
 
 @Get()
-getHello()
-:
-any
-{
+getHello():any {
   return {
     port: this.configService.PORT,
-    mongo_uri: this.configService.MONGO_URI,
-  };
-}
+    mongo_uri: this.configService.MONGO_URI, 
+    };
+  }
 }
 ```
 
@@ -174,7 +166,7 @@ console.log(appConfig.PORT)
   imports: [
     coreConfigEnvSettings,
     MongooseModule.forRoot(process.env.MONGO_URI),
-    PostsModule,
+    UsersModule,
     BlogsModule,
   ],
   controllers: [AppController],
@@ -204,7 +196,7 @@ export class AppModule {
       inject: [PostsConfigService], //инжектим здесь
     }),
     coreConfigEnvSettings,
-    PostsModule,
+    UsersModule,
     BlogsModule,
   ],
   controllers: [AppController],
@@ -228,7 +220,7 @@ import { PostsConfigService } from './app-config.service';
   providers: [PostsConfigService],
   exports: [PostsConfigService],
 })
-export class PostsConfigModule {}
+export class AuthConfigModule {}
 
 ```
 
@@ -242,14 +234,14 @@ import { Global, Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { MongooseModule } from '@nestjs/mongoose';
-import { PostsModule } from './modules/posts/posts.module';
+import { UsersModule } from './modules/posts/posts.module';
 import { BlogsModule } from './modules/blogs/blogs.module';
 import { PostsConfigService } from './core/configuration.service';
-import { PostsConfigModule } from './core/configuration.module';
+import { AuthConfigModule } from './core/configuration.module';
 
 @Module({
   imports: [
-    PostsConfigModule,
+    AuthConfigModule,
     MongooseModule.forRootAsync({
       useFactory: (appConfigService: PostsConfigService) => {
         return {
@@ -259,7 +251,7 @@ import { PostsConfigModule } from './core/configuration.module';
       inject: [PostsConfigService], //инжектим здесь
     }),
     coreConfigEnvSettings,
-    PostsModule,
+    UsersModule,
     BlogsModule,
   ],
   controllers: [AppController],
@@ -305,3 +297,69 @@ export const configModule = ConfigModule.forRoot({
 <b>end commit</b> #Part-3 настройка конфигурационного модуля
 
 ---
+
+## Guards, passport-strategy
+branch `guards-passport-strategy`
+### создание JWTAuthGuard без стратегий
+1) auth module, внутри папки лежат guards
+
+JWT auth-guard, ниже подключение JwtModule, там где удет формироваться токен, т.е в authService 
+```javascript
+@Module({
+  imports: [
+    UsersModule,
+    JwtModule.registerAsync({
+      useFactory: (authConfigService: AuthConfigService) => ({
+        global: true,
+        secret: authConfigService.JWT_AUTH_SECRET,
+        signOptions: { expiresIn: '60m' },
+      }),
+      inject: [AuthConfigService],
+    }),
+  ],
+  providers: [AuthService],
+  controllers: [AuthController],
+  exports: [AuthService],
+})
+export class AuthModule {}
+
+
+@Injectable()
+export class AuthService {
+  constructor(private usersService: UsersService, private jwtService: JwtService) {}
+
+    async signIn(username: string, pass: string){
+      const user = await this.usersService.findOne(username);
+    
+      if (user?.password !== pass) {
+        throw new UnauthorizedException();
+      }
+      const payload = { username: user.username, sub: user.userId };
+      return {
+        access_token: await this.jwtService.signAsync(payload),
+      };
+  }
+}
+```
+
+Но если нужно где-то(снаружи auth module/controller/service) заинжектить JwtService от JwtService, надо обязательно заИМПОРТировать JwtModule.
+
+Например, гард мы вешаем на один из эндпоинтов контроллера Users.. значит в UsersModule нужно обязательно заИМПОРТировать JwtModule 
+```javascript
+@Module({
+  imports: [JwtModule],
+  controllers: [UsersController],
+  providers: [UsersService],
+  exports: [UsersService],
+})
+export class UsersModule {}
+```
+
+2) создание JWTAuthGuard
+3) подключение на контроллер или на эндпоинт
+4) знакомимся с декоратором @Public() - если гард висит на весь контроллер, то можно отдельно на эндпоинты повесить декоратор, который позволит проигнорировать гард
+
+<b>end commit</b> #1) jwt-guard without strategy
+
+-- --
+

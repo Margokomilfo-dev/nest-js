@@ -9,18 +9,21 @@ import { AppConfigModule } from './core/configuration/app/app-config.module';
 import { AppConfigService } from './core/configuration/app/app-config.service';
 import { BlogsConfigModule } from './core/configuration/blogs/blogs-config.module';
 import { PostsConfigModule } from './core/configuration/posts/posts-config.module';
+import { AuthConfigModule } from './core/configuration/auth/auth-config.module';
+import { UsersModule } from './modules/users/users.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 const configModules = [
   coreConfigEnvSettings,
   AppConfigModule,
   BlogsConfigModule,
   PostsConfigModule,
+  AuthConfigModule,
 ];
 @Module({
-  controllers: [AppController],
-
   imports: [
     ...configModules,
+    AuthModule,
     MongooseModule.forRootAsync({
       useFactory: (appConfigService: AppConfigService) => {
         console.log(appConfigService);
@@ -32,7 +35,9 @@ const configModules = [
     }),
     PostsModule,
     BlogsModule,
+    UsersModule,
   ],
+  controllers: [AppController],
   providers: [AppService],
   exports: [],
 })
