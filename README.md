@@ -363,3 +363,76 @@ export class UsersModule {}
 
 -- --
 
+### Создание локального гарда, который будет проверять какие-то данные СО СТРАТЕГИЕЙ local
+1) создание local.strategy.ts
+```javascript
+import { Strategy } from 'passport-local';
+import { PassportStrategy } from '@nestjs/passport';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { AuthService } from './auth.service';
+
+@Injectable()
+export class LocalStrategy extends PassportStrategy(Strategy) {
+  constructor(private authService: AuthService) {
+    super();
+  }
+  //достает из body username и password, ищет юзера, если такой есть, то кладет его в req.user, иначе Ошибка
+  async validate(username: string, password: string): Promise<any> {
+    const user = await this.authService.validateUser(username, password);
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+    return user;
+  }
+}
+```
+2) создание local-auth.guard.ts
+```javascript
+import { Injectable } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+
+//чтобы не писать в контроллерах 'local'
+@Injectable()
+export class LocalAuthGuard extends AuthGuard('local') {}
+```
+3) в auth.module добавляем в imports и providers
+```javascript
+@Module({
+  imports: [..., PassportModule],
+  providers: [..., LocalStrategy],
+})
+export class AuthModule {}
+```
+4) в контроллере используем гард
+```javascript
+// Вариант 1 - в реквест кладет информацию о юзере (берет данные из @Body() data: LoginInput)
+// @UseGuards(AuthGuard('local')) 
+
+// Вариант 2 - создали LocalAuthGuard класс, в реквест кладет информацию о юзере (берет данные из @Body() 
+// data: LoginInput и если данные корректные,т.е юзер с такими данными есть в системе, 
+// то достает юзера и кладет его в request.user). Здесь токенами не пользуемся
+@UseGuards(LocalAuthGuard) 
+@Post('auth/login')
+async login(
+  @Request() req: UserRequestData,
+@Body() data: LoginInput,
+): Promise<any> {
+  console.log(data);
+  return req.user;
+}
+```
+
+5) переопределение полей из Body в стратегии,так как они там по дефолту username и password
+```javascript
+export class LocalStrategy extends PassportStrategy(Strategy) {
+  constructor(private authService: AuthService
+) {
+  super({ usernameField: 'name', passwordField: 'pass' });
+}
+
+//...
+}
+```
+<b>end commit</b> #2) simple local-guard with strategy
+
+-- --
