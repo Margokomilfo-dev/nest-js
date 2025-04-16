@@ -511,3 +511,80 @@ export class JwtLocalAuthGuard extends AuthGuard('jwt') {}
 }
 ```
 <b>end commit</b> #4) basic-guard with strategy
+
+-- --
+## Validation (ValidationPipe)
+Для проверки входных данных от клиента (query, body) Экспортируется ValidationPipe из @nestjs/common пакета.
+
+```javascript
+pnpm add class-validator class-transformer
+```
+
+```javascript
+//Глобальный пайп для валидации и трансформации входящих данных.
+app.useGlobalPipes(
+  new ValidationPipe({
+    transform: true,
+    whitelist: true, // валидатор удалит из проверенного (возвращенного) объекта все свойства, которые не используют какие-либо декораторы валидации.
+    stopAtFirstError: true, //Выдавать первую ошибку для каждого поля
+  }),
+);
+
+class UserData {
+  @IsString()
+  name: string;
+  
+  @IsString()
+  @IsNotEmpty()
+  pass: string;
+}
+
+@Post()
+create(@Body() createUserDto: UserData) {
+  return 'This action adds a new user';
+}
+```
+Теперь при запросе на Post запрос метода create приложение валидирует входящие данные относительно декораторов указанных в классе dto
+
+Если данные будут клиентом некорректно введены, то респнс клиенту будет следующий
+```javascript
+{
+  "statusCode": 400,
+  "message": [
+    "name must be a string",
+    "pass must be a string"
+  ],
+  "error": "Bad Request"
+}
+```
+Обработка Respose - следующая тема
+
+так же можно валидировать и входящие параметры в Url
+```javascript
+export class FindOneParams {
+  @IsNumberString()
+  id: string;
+}
+
+@Get(':id')
+findOne(@Param() params: FindOneParams) {
+  return 'This action returns a user';
+}
+```
+Будет возвращена ошибка, если Id был не числоподобный :)
+
+А так же можно повесить индивидуальную валидацию на входящие данные 
+```javascript
+@Param('id', ParseIntPipe) id: number,
+@Query('sort', ParseBoolPipe) sort: boolean
+
+@ParseIntPipe
+@ParseBoolPipe
+@ParseArrayPipe
+@ParseUUIDPipe
+```
+<b>end commit</b> #1) basic ValidationPipe
+
+-- --
+
+

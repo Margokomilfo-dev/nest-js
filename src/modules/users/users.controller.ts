@@ -5,16 +5,23 @@ import {
   Request,
   Post,
   Body,
+  Param,
 } from '@nestjs/common';
 import { AppConfigService } from '../../core/configuration/app/app-config.service';
 import { AuthConfigService } from '../../core/configuration/auth/auth-config.service';
 import { UsersService } from './users.service';
 //import { Public } from '../auth/guards/decorators/public.decorator';
-import { IsObject, IsString } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsNumberString,
+  IsObject,
+  IsString,
+} from 'class-validator';
 import { LocalAuthGuard } from '../auth/guards/local-auth-guard/local-auth.guard';
 import { JwtStrategyAuthGuard } from '../auth/guards/jwt-auth-guard/jwt-strategy-auth.guard';
 import { JWTAuthGuard } from '../auth/guards/jwt-auth-guard/without-strategy/jwt-auth.guard';
 import { BasicStrategyAuthGuard } from '../auth/guards/basic-auth-guard/basic-auth.guard';
+import { ApiParam } from '@nestjs/swagger';
 
 class LoginInput {
   @IsString()
@@ -24,13 +31,20 @@ class LoginInput {
 }
 class UserData {
   @IsString()
+  @IsNotEmpty()
   name: string;
+
   @IsString()
   pass: string;
 }
 class UserRequestData {
   @IsObject()
   user: UserData;
+}
+
+export class FindOneParams {
+  @IsNumberString()
+  id: string;
 }
 
 @Controller('users')
@@ -78,5 +92,17 @@ export class UsersController {
   @Post('auth/basic-login')
   async login3(@Request() req: UserRequestData): Promise<any> {
     return req.user;
+  }
+
+  @Post()
+  create(@Body() createUserDto: UserData) {
+    console.log(createUserDto); //не придут "левые" поля
+    return 'This action adds a new user';
+  }
+
+  @ApiParam({ name: 'id' }) //для сваггера
+  @Get('/byId/:id')
+  findOne(@Param() params: FindOneParams) {
+    return 'This action returns a user';
   }
 }
