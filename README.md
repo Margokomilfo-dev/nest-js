@@ -718,3 +718,23 @@ export class UsersModule {}
 <b>end commit</b> mongoose (integration to user entity)
 
 -- --
+## Decorator IsStringWithTrim (branch `decorators`)
+```javascript
+//creating of custom decorator
+export const IsStringWithTrim = (minLength: number, maxLength: number) =>
+  applyDecorators(
+    IsString(),
+    Length(minLength, maxLength),
+
+    Transform(({ value }: TransformFnParams) => {
+      return typeof value === 'string' ? value.trim() : value;
+    }),
+  );
+
+//use it into dto
+@IsStringWithTrim(3, 20) //проверит + удалит пробелы
+email: string;
+```
+<b>end commit</b> decorator IsStringWithTrim
+
+-- --
