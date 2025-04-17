@@ -1,15 +1,15 @@
 import {
+  Body,
   Controller,
   Get,
-  UseGuards,
-  Request,
-  Post,
-  Body,
   Param,
+  Post,
+  Request,
+  UseGuards,
 } from '@nestjs/common';
-import { AppConfigService } from '../../core/configuration/app/app-config.service';
-import { AuthConfigService } from '../../core/configuration/auth/auth-config.service';
-import { UsersService } from './users.service';
+import { AppConfigService } from '../../../core/configuration/app/app-config.service';
+import { AuthConfigService } from '../../../core/configuration/auth/auth-config.service';
+import { UsersService } from '../application/users.service';
 //import { Public } from '../auth/guards/decorators/public.decorator';
 import {
   IsNotEmpty,
@@ -17,11 +17,14 @@ import {
   IsObject,
   IsString,
 } from 'class-validator';
-import { LocalAuthGuard } from '../auth/guards/local-auth-guard/local-auth.guard';
-import { JwtStrategyAuthGuard } from '../auth/guards/jwt-auth-guard/jwt-strategy-auth.guard';
-import { JWTAuthGuard } from '../auth/guards/jwt-auth-guard/without-strategy/jwt-auth.guard';
-import { BasicStrategyAuthGuard } from '../auth/guards/basic-auth-guard/basic-auth.guard';
+import { LocalAuthGuard } from '../../auth/guards/local-auth-guard/local-auth.guard';
+import { JwtStrategyAuthGuard } from '../../auth/guards/jwt-auth-guard/jwt-strategy-auth.guard';
+import { JWTAuthGuard } from '../../auth/guards/jwt-auth-guard/without-strategy/jwt-auth.guard';
+import { BasicStrategyAuthGuard } from '../../auth/guards/basic-auth-guard/basic-auth.guard';
 import { ApiParam } from '@nestjs/swagger';
+import { Types } from 'mongoose';
+import { ObjectIdTransformationPipe } from '../../../validationPipes/object-id-transformation.pipe';
+import { IsObjectIdPipe } from '@nestjs/mongoose';
 
 class LoginInput {
   @IsString()
@@ -41,7 +44,6 @@ class UserRequestData {
   @IsObject()
   user: UserData;
 }
-
 export class FindOneParams {
   @IsNumberString()
   id: string;
@@ -102,7 +104,16 @@ export class UsersController {
 
   @ApiParam({ name: 'id' }) //для сваггера
   @Get('/byId/:id')
-  findOne(@Param() params: FindOneParams) {
+  findOne(@Param() id: string) {
+    return 'This action returns a user';
+  }
+
+  @ApiParam({ name: 'id', type: 'string' }) //для сваггера
+  @Get('/byUUId/:id')
+  //global Pipe transform to Types.ObjectId does not work! todo
+  // findOneByUUid(@Param('id') id: Types.ObjectId) {
+  findOneByUUid(@Param('id', IsObjectIdPipe) id: string) {
+    console.log('id:', new Types.ObjectId(id));
     return 'This action returns a user';
   }
 }

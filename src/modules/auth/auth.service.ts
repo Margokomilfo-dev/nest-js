@@ -1,5 +1,5 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { UsersService } from '../users/users.service';
+import { UsersService } from '../users/application/users.service';
 import { JwtService } from '@nestjs/jwt'; //это пакет утилит, который помогает с манипуляциями JWT. Это включает в себя генерацию и проверку токенов JWT.
 
 @Injectable()

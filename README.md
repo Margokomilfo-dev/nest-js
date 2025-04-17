@@ -587,4 +587,4 @@ findOne(@Param() params: FindOneParams) {
 
 -- --
 
-
+создание глобального пайпа, который проверяет входные данные id: Types.ObjectId, чтобы провалидировать 
