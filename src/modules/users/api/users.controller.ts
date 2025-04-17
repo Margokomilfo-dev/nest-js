@@ -1,9 +1,13 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Post,
+  Put,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -22,9 +26,13 @@ import { JwtStrategyAuthGuard } from '../../auth/guards/jwt-auth-guard/jwt-strat
 import { JWTAuthGuard } from '../../auth/guards/jwt-auth-guard/without-strategy/jwt-auth.guard';
 import { BasicStrategyAuthGuard } from '../../auth/guards/basic-auth-guard/basic-auth.guard';
 import { ApiParam } from '@nestjs/swagger';
-import { Types } from 'mongoose';
+import { ObjectId, Types } from 'mongoose';
 import { ObjectIdTransformationPipe } from '../../../validationPipes/object-id-transformation.pipe';
 import { IsObjectIdPipe } from '@nestjs/mongoose';
+import { CreateUserInput } from '../dto/input/create-user.input';
+import { UsersQueryRepository } from '../infrastructure/users.query-repository';
+import { UserOutput } from '../dto/output/user.output';
+import { UpdateUserInput } from '../dto/input/update-user.input';
 
 class LoginInput {
   @IsString()
@@ -44,10 +52,6 @@ class UserRequestData {
   @IsObject()
   user: UserData;
 }
-export class FindOneParams {
-  @IsNumberString()
-  id: string;
-}
 
 @Controller('users')
 export class UsersController {
@@ -55,6 +59,7 @@ export class UsersController {
     private readonly authConfigService: AuthConfigService,
     private readonly appConfigService: AppConfigService,
     private readonly userService: UsersService,
+    private readonly usersQueryRepository: UsersQueryRepository,
   ) {}
 
   @Get()
@@ -66,7 +71,7 @@ export class UsersController {
     };
   }
 
-  @UseGuards(JWTAuthGuard) //проверяет валидность токена пользователя
+  //@UseGuards(JWTAuthGuard) //проверяет валидность токена пользователя
   //@Public() - если гард висит на весь контроллер, то можно отдельно на эндпоинты повесить декоратор, который позволит проигнорировать гард
   @Get('get-users')
   getUsers(): any {
@@ -97,9 +102,9 @@ export class UsersController {
   }
 
   @Post()
-  create(@Body() createUserDto: UserData) {
-    console.log(createUserDto); //не придут "левые" поля
-    return 'This action adds a new user';
+  async create(@Body() createUserDto: CreateUserInput): Promise<UserOutput> {
+    const userId = await this.userService.createUser(createUserDto);
+    return this.usersQueryRepository.findOrNotFoundFail(userId);
   }
 
   @ApiParam({ name: 'id' }) //для сваггера
@@ -110,10 +115,29 @@ export class UsersController {
 
   @ApiParam({ name: 'id', type: 'string' }) //для сваггера
   @Get('/byUUId/:id')
-  //global Pipe transform to Types.ObjectId does not work! todo
+  // global Pipe transform to Types.ObjectId does not work! todo
   // findOneByUUid(@Param('id') id: Types.ObjectId) {
   findOneByUUid(@Param('id', IsObjectIdPipe) id: string) {
     console.log('id:', new Types.ObjectId(id));
     return 'This action returns a user';
+  }
+
+  @ApiParam({ name: 'id', type: 'string' })
+  @Put(':id')
+  async updateUser(
+    @Param('id', IsObjectIdPipe) id: string,
+    @Body() body: UpdateUserInput,
+  ): Promise<UserOutput> {
+    const userId = await this.userService.updateUser(id, body);
+    return this.usersQueryRepository.findOrNotFoundFail(userId);
+  }
+
+  @ApiParam({ name: 'id' }) //для сваггера
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteUser(@Param('id', IsObjectIdPipe) id: string): Promise<void> {
+    console.log(id);
+    return;
+    //this.usersService.deleteUser(id.id);
   }
 }
