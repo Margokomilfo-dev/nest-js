@@ -29,10 +29,9 @@ import { ObjectIdValidationTransformationPipe } from '../../../core/pipes/object
 import { UpdateUserInput } from '../dto/input/update-user.input';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { CreateUserCommand } from '../application/use-cases/create-user.use-case';
-import {
-  GetUserByIdQuery,
-  GetUserByIdQueryHandler,
-} from '../application/queries/get-user-by-id.query-handler';
+import { GetUserByIdQuery } from '../application/queries/get-user-by-id.query-handler';
+import { UpdateUserCommand } from '../application/use-cases/update-user.use-case';
+import { DeleteUserCommand } from '../application/use-cases/delete-user.use-case';
 
 class LoginInput {
   @IsString()
@@ -133,14 +132,16 @@ export class UsersController {
     @Param('id', ObjectIdValidationTransformationPipe) id: Types.ObjectId,
     @Body() body: UpdateUserInput,
   ): Promise<UserOutput> {
-    const updUserId = await this.userService.updateUser(id, body);
-    return this.usersQueryRepository.findOrNotFoundFail(updUserId);
+    const updUserId = await this.commandBus.execute(
+      new UpdateUserCommand(id, body),
+    );
+    return this.queryBus.execute(new GetUserByIdQuery(updUserId));
   }
 
   @ApiParam({ name: 'id' }) //для сваггера
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteUser(@Param('id', IsObjectIdPipe) id: string) {
-    return this.userService.deleteUser(id);
+    return this.commandBus.execute(new DeleteUserCommand(id));
   }
 }

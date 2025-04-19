@@ -8,6 +8,8 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from './domain/user.entity';
 import { CreateUserUseCase } from './application/use-cases/create-user.use-case';
 import { GetUserByIdQueryHandler } from './application/queries/get-user-by-id.query-handler';
+import { UpdateUserUseCase } from './application/use-cases/update-user.use-case';
+import { DeleteUserUseCase } from './application/use-cases/delete-user.use-case';
 
 @Module({
   imports: [
@@ -20,6 +22,8 @@ import { GetUserByIdQueryHandler } from './application/queries/get-user-by-id.qu
     UsersRepository,
     UsersQueryRepository,
     CreateUserUseCase,
+    UpdateUserUseCase,
+    DeleteUserUseCase,
     GetUserByIdQueryHandler,
   ],
   exports: [UsersService],
