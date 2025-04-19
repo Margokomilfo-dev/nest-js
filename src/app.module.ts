@@ -16,6 +16,8 @@ import { APP_FILTER } from '@nestjs/core';
 import { DomainHttpExceptionsFilter } from './core/exceptions/filters/domain-exceptions.filter';
 import { AllHttpExceptionsFilter } from './core/exceptions/filters/all-exceptions.filter';
 import { CoreModule } from './core/core.module';
+import { NotificationConfigModule } from './core/configuration/notification/notification-config.module';
+import { NotificationsModule } from './core/notifiactions/notifications.module';
 
 const configModules = [
   coreConfigEnvSettings,
@@ -24,6 +26,7 @@ const configModules = [
   BlogsConfigModule,
   PostsConfigModule,
   AuthConfigModule,
+  NotificationConfigModule,
 ];
 
 @Module({
@@ -39,6 +42,7 @@ const configModules = [
     PostsModule,
     BlogsModule,
     UsersModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [

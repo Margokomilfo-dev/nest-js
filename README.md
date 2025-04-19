@@ -222,7 +222,7 @@ import { PostsConfigService } from './app-config.service';
   providers: [PostsConfigService],
   exports: [PostsConfigService],
 })
-export class AuthConfigModule {}
+export class NotificationConfigModule {}
 
 ```
 
@@ -239,11 +239,11 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { UsersModule } from './modules/posts/posts.module';
 import { BlogsModule } from './modules/blogs/blogs.module';
 import { PostsConfigService } from './core/configuration.service';
-import { AuthConfigModule } from './core/configuration.module';
+import { NotificationConfigModule } from './core/configuration.module';
 
 @Module({
   imports: [
-    AuthConfigModule,
+    NotificationConfigModule,
     MongooseModule.forRootAsync({
       useFactory: (appConfigService: PostsConfigService) => {
         return {
@@ -316,40 +316,55 @@ branch `guards-passport-strategy`
 JWT auth-guard, ниже подключение JwtModule, там где удет формироваться токен, т.е в authService
 
 ```javascript
+
 @Module({
-  imports: [
-    UsersModule,
-    JwtModule.registerAsync({
-      useFactory: (authConfigService: AuthConfigService) => ({
-        global: true,
-        secret: authConfigService.JWT_AUTH_SECRET,
-        signOptions: { expiresIn: '60m' },
+   imports: [
+      UsersModule,
+      JwtModule.registerAsync({
+         useFactory: (authConfigService: NotificationConfigService) => ({
+            global: true,
+            secret: authConfigService.JWT_AUTH_SECRET,
+            signOptions: { expiresIn: '60m' },
+         }),
+         inject: [NotificationConfigService],
       }),
-      inject: [AuthConfigService],
-    }),
-  ],
-  providers: [AuthService],
-  controllers: [AuthController],
-  exports: [AuthService],
+   ],
+   providers: [AuthService],
+   controllers: [AuthController],
+   exports: [AuthService],
 })
-export class AuthModule {}
+export class AuthModule {
+}
 
 
 @Injectable()
 export class AuthService {
-  constructor(private usersService: UsersService, private jwtService: JwtService) {}
+   constructor(private
 
-    async signIn(username: string, pass: string){
-      const user = await this.usersService.findOne(username);
-  
-      if (user?.password !== pass) {
-        throw new UnauthorizedException();
-      }
-      const payload = { username: user.username, sub: user.userId };
-      return {
-        access_token: await this.jwtService.signAsync(payload),
-      };
-  }
+   usersService: UsersService
+,
+   private jwtService: JwtService
+) {
+}
+
+async
+signIn(username
+:
+string, pass
+:
+string
+)
+{
+   const user = await this.usersService.findOne(username);
+
+   if (user?.password !== pass) {
+      throw new UnauthorizedException();
+   }
+   const payload = { username: user.username, sub: user.userId };
+   return {
+      access_token: await this.jwtService.signAsync(payload),
+   };
+}
 }
 ```
 
@@ -473,7 +488,7 @@ async login(user: any) {
 }
 ```
 
-- так же есть подклбченный AuthConfigService с переменными (secret)
+- так же есть подклбченный NotificationConfigService с переменными (secret)
 - в authModule подклбчен JwtModule
 
 1) создание jwt.strategy.ts
@@ -1097,5 +1112,122 @@ export class GetUserByIdQueryHandler implements IQueryHandler<GetUserByIdQuery> 
    execute({ id }: GetUserByIdQuery): Promise<UserOutput> {
       return this.usersQueryRepository.findOrNotFoundFail(id);
    }
+}
+```
+---
+## Nodemailer, send message to email of customer
+1) создать гугл акк
+2) зайти в настройки аккаунта
+   2.1) включить двухфакторную
+   2.2) перейти по ссылке https://myaccount.google.com/apppasswords
+   2.3) создать название приложения (н-р, nodeMailer)
+   2.4) сохранить код, который будет дан системой (использовать его надо убдет вместо пароля от почты)
+3) pnpm add nodemailer, 
+4) pnpm add @nestjs-modules/mailer
+5) в енвайроманты добавляем новые переменные относитльно раоботы с почтой
+```javascript
+MAIL_HOST=//заполнить
+MAIL_PORT=//заполнить
+MAIL_SECURE=//заполнить
+MAIL_USER=blabla@gmail.com//заполнить
+MAIL_PASS=codeFromGMAIL //код при создании приложения в настройках аккаунта
+```
+6) создаем конфигурационные настройки (NotificationConfigModule, NotificationConfigService), подключаем в Импорты app.module.ts NotificationConfigModule
+7) создаем модуль с нотификациями
+```javascript
+@Module({
+   imports: [
+      MailerModule.forRootAsync({
+         imports: [NotificationConfigModule],
+         inject: [NotificationConfigService],
+         useFactory: (notificationConfigService: NotificationConfigService) => {
+            console.log(notificationConfigService);
+            return {
+               transport: {
+                  host: notificationConfigService.MAIL_HOST,
+                  port: notificationConfigService.MAIL_PORT,
+                  secure: notificationConfigService.MAIL_SECURE, // true для порта 465, false для 587
+                  auth: {
+                     user: notificationConfigService.MAIL_USER,
+                     pass: notificationConfigService.MAIL_PASS,
+                  },
+               },
+               defaults: {
+                  from: `"No Reply =) " <${notificationConfigService.MAIL_USER}>`,
+               },
+            };
+         },
+      }),
+   ],
+   providers: [
+      EmailService,
+      SendConfirmationEmailWhenUserRegisteredEventHandler,
+   ],
+   exports: [],
+})
+export class NotificationsModule {}
+```
+8) не заыбваем модуль добавить в app.module.ts
+9) создаем сервис, которые сообщения отправляет, сервис добавляем в providers: [] модуля (выше)
+```javascript
+@Injectable()
+export class EmailService {
+   constructor(private mailerService: MailerService) {}
+
+async sendConfirmationEmail(email: string, code: string): Promise<void> {
+   await this.mailerService.sendMail({
+      to: email,
+      subject: 'Email confirmation - TEST',
+      text: `confirm registration via link https://some.com?code=${code}`,
+   });
+  }
+}
+```
+10) создаем SendConfirmationEmailWhenUserRegisteredEventHandler, handler, который будет вызываться шиной() при событии SendInvitationEvent
+```javascript
+export class SendInvitationEvent {
+   constructor(public readonly email: string, public confirmationCode: string) {}
+}
+
+@EventsHandler(SendInvitationEvent)
+export class SendConfirmationEmailWhenUserRegisteredEventHandler
+        implements IEventHandler<SendInvitationEvent>
+{
+   constructor(private emailService: EmailService) {}
+
+async handle(event: SendInvitationEvent) {
+   // Ошибки в EventHandlers не могут быть пойманы фильтрами исключений:
+   // необходимо обрабатывать вручную
+   try {
+      console.log('event:', event);
+      await this.emailService.sendConfirmationEmail(
+              event.email,
+              event.confirmationCode,
+      );
+   } catch (e) {
+      console.error('send email', e);
+   }
+}
+}
+```
+11) SendConfirmationEmailWhenUserRegisteredEventHandler добавим в провайдеры в модуле NotificationsModule
+12) вызовем где надо наш метод событий и проверим как он работает
+```javascript
+export class CreateUserCommand {
+  constructor(public dto: CreateUserInput) {}
+}
+
+@CommandHandler(CreateUserCommand)
+export class CreateUserUseCase implements ICommandHandler<CreateUserCommand> {
+  constructor(
+    //...
+    private eventBus: EventBus,
+  ) {}
+  async execute({ dto }: CreateUserCommand): Promise<Types.ObjectId> {
+    //...
+    //!!!!!!!!!!
+    this.eventBus.publish(new SendInvitationEvent(user.email, '12345'));
+    //..
+  }
 }
 ```

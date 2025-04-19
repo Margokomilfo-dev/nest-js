@@ -5,7 +5,7 @@ export class CreateUserInput {
   @IsString()
   login: string;
 
-  @IsStringWithTrim(3, 20) //проверит + удалит пробелы
+  @IsStringWithTrim(3, 30) //проверит + удалит пробелы
   email: string;
 
   @IsString()
