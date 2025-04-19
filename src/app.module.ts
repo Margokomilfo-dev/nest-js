@@ -12,6 +12,9 @@ import { PostsConfigModule } from './core/configuration/posts/posts-config.modul
 import { AuthConfigModule } from './core/configuration/auth/auth-config.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { APP_FILTER } from '@nestjs/core';
+import { DomainHttpExceptionsFilter } from './core/exceptions/filters/domain-exceptions.filter';
+import { AllHttpExceptionsFilter } from './core/exceptions/filters/all-exceptions.filter';
 
 const configModules = [
   coreConfigEnvSettings,
@@ -20,6 +23,7 @@ const configModules = [
   PostsConfigModule,
   AuthConfigModule,
 ];
+
 @Module({
   imports: [
     ...configModules,
@@ -35,7 +39,17 @@ const configModules = [
     UsersModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_FILTER,
+      useClass: AllHttpExceptionsFilter,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: DomainHttpExceptionsFilter,
+    },
+  ],
   exports: [],
 })
 export class AppModule {}

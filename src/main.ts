@@ -3,8 +3,12 @@ import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppConfigService } from './core/configuration/app/app-config.service';
 import { ValidationPipe } from '@nestjs/common';
-import { ObjectIdValidationPipe } from './validationPipes/object-id-validation.pipe';
-import { ObjectIdTransformationPipe } from './validationPipes/object-id-transformation.pipe';
+import {
+  DomainException,
+  DomainExceptionCode,
+  Extension,
+} from './core/exceptions/domain-exceptions';
+import { ValidationError } from 'class-validator/types/validation/ValidationError';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -30,9 +34,38 @@ async function bootstrap() {
       whitelist: true, // валидатор удалит из проверенного (возвращенного) объекта все свойства, которые не используют какие-либо декораторы валидации.
       stopAtFirstError: true, //Выдавать первую ошибку для каждого поля
 
-      exceptionFactory: (error) => {
-        console.log(error);
-        throw new Error('some error');
+      exceptionFactory: (errors) => {
+        console.log('in exceptionFactory');
+        const formattedErrors: Extension[] = [];
+
+        //в определенном формате нам надо выводить ошибки
+        const formatErrors = (
+          errors: ValidationError[],
+          extensions: Extension[],
+        ) => {
+          for (const error of errors) {
+            if (error.constraints) {
+              for (const key in error.constraints) {
+                extensions.push({
+                  message: `${error.constraints[key]}; Received value: ${error.value}`,
+                  key: error.property,
+                });
+              }
+            }
+
+            if (error.children?.length) {
+              formatErrors(error.children, extensions);
+            }
+          }
+        };
+
+        formatErrors(errors, formattedErrors);
+
+        throw new DomainException({
+          code: DomainExceptionCode.ValidationError,
+          message: 'Validation failed',
+          extensions: formattedErrors,
+        });
       },
     }),
   );
