@@ -2,7 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppConfigService } from './core/configuration/app/app-config.service';
-import { ValidationPipe } from '@nestjs/common';
+import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { ObjectIdValidationPipe } from './validationPipes/object-id-validation.pipe';
 import { ObjectIdTransformationPipe } from './validationPipes/object-id-transformation.pipe';
 
@@ -32,7 +32,7 @@ async function bootstrap() {
 
       exceptionFactory: (error) => {
         console.log(error);
-        throw new Error('some error');
+        throw new BadRequestException('ошибка в валидации поля!'); //400, message='ошибка в валидации поля!', error: Bad Request
       },
     }),
   );

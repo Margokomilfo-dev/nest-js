@@ -1,16 +1,20 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
+  ParseIntPipe,
   Post,
+  Put,
   Request,
   UseGuards,
 } from '@nestjs/common';
 import { AppConfigService } from '../../../core/configuration/app/app-config.service';
 import { AuthConfigService } from '../../../core/configuration/auth/auth-config.service';
 import { UsersService } from '../application/users.service';
-//import { Public } from '../auth/guards/decorators/public.decorator';
 import {
   IsNotEmpty,
   IsNumberString,
@@ -19,12 +23,12 @@ import {
 } from 'class-validator';
 import { LocalAuthGuard } from '../../auth/guards/local-auth-guard/local-auth.guard';
 import { JwtStrategyAuthGuard } from '../../auth/guards/jwt-auth-guard/jwt-strategy-auth.guard';
-import { JWTAuthGuard } from '../../auth/guards/jwt-auth-guard/without-strategy/jwt-auth.guard';
 import { BasicStrategyAuthGuard } from '../../auth/guards/basic-auth-guard/basic-auth.guard';
 import { ApiParam } from '@nestjs/swagger';
 import { Types } from 'mongoose';
-import { ObjectIdTransformationPipe } from '../../../validationPipes/object-id-transformation.pipe';
 import { IsObjectIdPipe } from '@nestjs/mongoose';
+import { ObjectIdValidationTransformationPipe } from '../../../core/pipes/object-id-validation-transformation-pipe.service';
+import { JWTAuthGuard } from '../../auth/guards/jwt-auth-guard/without-strategy/jwt-auth.guard';
 
 class LoginInput {
   @IsString()
@@ -115,5 +119,23 @@ export class UsersController {
   findOneByUUid(@Param('id', IsObjectIdPipe) id: string) {
     console.log('id:', new Types.ObjectId(id));
     return 'This action returns a user';
+  }
+
+  @ApiParam({ name: 'id', type: 'string' })
+  @Put(':id')
+  async updateUser(
+    @Param('id', ObjectIdValidationTransformationPipe) id: Types.ObjectId,
+    @Body() body: UserData,
+  ) {
+    console.log('id:', id);
+  }
+
+  @ApiParam({ name: 'id' }) //для сваггера
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteUser(@Param('id', ParseIntPipe) id: number): Promise<void> {
+    console.log(id);
+    return;
+    //this.usersService.deleteUser(id.id);
   }
 }
