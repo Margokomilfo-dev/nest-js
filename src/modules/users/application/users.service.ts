@@ -1,8 +1,7 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { UsersRepository } from '../infrastructure/users.repository';
 import { User, UserDocument, UserModelType } from '../domain/user.entity';
 import { UpdateUserInput } from '../dto/input/update-user.input';
-import { CreateUserInput } from '../dto/input/create-user.input';
 import { InjectModel } from '@nestjs/mongoose';
 import { Types } from 'mongoose';
 
@@ -34,25 +33,6 @@ export class UsersService {
     const user = await this.usersRepository.findOrNotFoundFail(id.toString());
 
     user.update(dto);
-
-    await this.usersRepository.save(user);
-
-    return user._id;
-  }
-
-  async createUser(dto: CreateUserInput): Promise<Types.ObjectId> {
-    const userWithTheSameLogin = await this.usersRepository.findByLogin(
-      dto.login,
-    );
-    if (!!userWithTheSameLogin) {
-      throw new BadRequestException('User with the same login already exists');
-    }
-
-    const user = this.UserModel.createInstance({
-      email: dto.email,
-      login: dto.login,
-      pass: dto.pass,
-    });
 
     await this.usersRepository.save(user);
 

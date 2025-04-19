@@ -1017,3 +1017,85 @@ email: string;
 <b>end commit</b> decorator IsStringWithTrim
 
 -- --
+
+## CQRS
+
+1) pnpm add @nestjs/cqrs
+2) создаем отедльный можуль, делаем его глобальным, так как CqrsModule надо сдеать глобальным.
+```javascript
+//глобальный модуль для провайдеров и модулей необходимых во всех частях приложения (например LoggerService, CqrsModule, etc...)
+@Global()
+@Module({
+   imports: [CqrsModule],
+   exports: [CqrsModule],
+   providers: [],
+})
+export class CoreModule {}
+```
+3) модуль User декомпозируем... сервисы на юз-кейсы, юз-кейсы упаковываем в команды. Логика query если сложная, то уводим ее в queryHandlers
+
+Пример ниже: 
+```javascript
+@Controller('users')
+export class UsersController {
+   constructor(
+   //...
+   private readonly queryBus: QueryBus,
+   private readonly commandBus: CommandBus,
+) {
+   //...
+   @Post()
+   async create(@Body() createUserDto: CreateUserInput): Promise<UserOutput> {
+      const userId = await this.commandBus.execute(
+              new CreateUserCommand(createUserDto),
+      );
+      return this.queryBus.execute(new GetUserByIdQuery(userId));
+   }
+}
+```
+```javascript
+
+export class CreateUserCommand {
+   constructor(public dto: CreateUserInput) {}
+}
+
+@CommandHandler(CreateUserCommand)
+export class CreateUserUseCase implements ICommandHandler<CreateUserCommand> {
+   constructor(
+           @InjectModel(User.name) private UserModel: UserModelType,
+   private usersRepository: UsersRepository,
+) {}
+async execute({ dto }: CreateUserCommand): Promise<Types.ObjectId> {
+   const userWithTheSameLogin = await this.usersRepository.findByLogin(
+           dto.login,
+   );
+   if (!!userWithTheSameLogin) {
+   throw new BadRequestException('User with the same login already exists');
+}
+
+const user = this.UserModel.createInstance({
+   email: dto.email,
+   login: dto.login,
+   pass: dto.pass,
+});
+
+await this.usersRepository.save(user);
+
+return user._id;
+}
+}
+```
+```javascript
+export class GetUserByIdQuery { 
+  constructor(public id: Types.ObjectId) {}
+}
+
+@QueryHandler(GetUserByIdQuery)
+export class GetUserByIdQueryHandler implements IQueryHandler<GetUserByIdQuery> {
+   constructor(private readonly usersQueryRepository: UsersQueryRepository) {}
+
+   execute({ id }: GetUserByIdQuery): Promise<UserOutput> {
+      return this.usersQueryRepository.findOrNotFoundFail(id);
+   }
+}
+```

@@ -15,9 +15,11 @@ import { AuthModule } from './modules/auth/auth.module';
 import { APP_FILTER } from '@nestjs/core';
 import { DomainHttpExceptionsFilter } from './core/exceptions/filters/domain-exceptions.filter';
 import { AllHttpExceptionsFilter } from './core/exceptions/filters/all-exceptions.filter';
+import { CoreModule } from './core/core.module';
 
 const configModules = [
   coreConfigEnvSettings,
+  CoreModule,
   AppConfigModule,
   BlogsConfigModule,
   PostsConfigModule,

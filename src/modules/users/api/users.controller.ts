@@ -27,6 +27,12 @@ import { UsersQueryRepository } from '../infrastructure/users.query-repository';
 import { UserOutput } from '../dto/output/user.output';
 import { ObjectIdValidationTransformationPipe } from '../../../core/pipes/object-id-validation-transformation-pipe.service';
 import { UpdateUserInput } from '../dto/input/update-user.input';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { CreateUserCommand } from '../application/use-cases/create-user.use-case';
+import {
+  GetUserByIdQuery,
+  GetUserByIdQueryHandler,
+} from '../application/queries/get-user-by-id.query-handler';
 
 class LoginInput {
   @IsString()
@@ -54,6 +60,8 @@ export class UsersController {
     private readonly appConfigService: AppConfigService,
     private readonly userService: UsersService,
     private readonly usersQueryRepository: UsersQueryRepository,
+    private readonly queryBus: QueryBus,
+    private readonly commandBus: CommandBus,
   ) {}
 
   @Get()
@@ -97,8 +105,10 @@ export class UsersController {
 
   @Post()
   async create(@Body() createUserDto: CreateUserInput): Promise<UserOutput> {
-    const userId = await this.userService.createUser(createUserDto);
-    return this.usersQueryRepository.findOrNotFoundFail(userId);
+    const userId = await this.commandBus.execute(
+      new CreateUserCommand(createUserDto),
+    );
+    return this.queryBus.execute(new GetUserByIdQuery(userId));
   }
 
   @ApiParam({ name: 'id' }) //для сваггера
