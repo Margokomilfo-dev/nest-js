@@ -116,6 +116,7 @@ export const configurationEnvSettings = ConfigModule.forRoot({
 ```
 
 с тем учетом, что все перемнные в енвайремантах имеют тип строки... И поэтому надо написать некую валирацию. Для этого создадим новый класс (провайдер, сервис), в котором будем инжектить ConfigModule и настраивать все переменные
+
 ```javascript
 import { ConfigService } from '@nestjs/config';
 import { Injectable } from '@nestjs/common';
@@ -130,6 +131,7 @@ export class ConfigurationService {
   MONGO_URI: string = this.configService.get('MONGO_URI');
 }
 ```
+
 Инжектим его в провайдеры app.module и теперь пользуемся им как вспомагатором
 
 например
@@ -150,7 +152,7 @@ getHello():any {
 }
 ```
 
-!!! внутри функции booster вызывается process.env... но это не класс и мы не можем configurationService заинжектить. 
+!!! внутри функции booster вызывается process.env... но это не класс и мы не можем configurationService заинжектить.
 Но.. у нас есть app... а в несте у этого app можно с ioc достать все что нам нужно
 
 ```javascript
@@ -209,7 +211,7 @@ export class AppModule {
 
 НОООО делать App Module Global не хорошо... а это мы делаем сейчас, чтобы в нашей useFactory был дступен ConfigurationService...
 
-поэтому мы создадим отдельный модуль 
+поэтому мы создадим отдельный модуль
 
 ```javascript
 import { Global, Module } from '@nestjs/common';
@@ -260,6 +262,7 @@ import { AuthConfigModule } from './core/configuration.module';
 })
 export class AppModule {}
 ```
+
 Приложение запустилось...
 
 <b>end commit</b> #Part-2 настройка конфигурационного модуля
@@ -269,11 +272,13 @@ export class AppModule {}
 <b>end commit</b> #Part-3 настройка конфигурационного модуля
 
 ---
+
 Подключение конфигурационного модуля во время сборки.
 Так как при сборке на хостинге идет запуск приложения из dist... переменные .env не попадут и на этапе сборки приложение упадет.
 Поэтому все энвайроманты мы перенесем в отдельную папку env в src (/core)
 
 в файлк nest-cli.json добавляем настройки
+
 ```javascript
  "compilerOptions": {
     "deleteOutDir": true,
@@ -282,7 +287,9 @@ export class AppModule {}
     ]
   }
 ```
+
 в файле core-config-env-settings.ts
+
 ```javascript
 export const configModule = ConfigModule.forRoot({
   envFilePath: [
@@ -299,11 +306,15 @@ export const configModule = ConfigModule.forRoot({
 ---
 
 ## Guards, passport-strategy
+
 branch `guards-passport-strategy`
+
 ### создание JWTAuthGuard без стратегий
+
 1) auth module, внутри папки лежат guards
 
-JWT auth-guard, ниже подключение JwtModule, там где удет формироваться токен, т.е в authService 
+JWT auth-guard, ниже подключение JwtModule, там где удет формироваться токен, т.е в authService
+
 ```javascript
 @Module({
   imports: [
@@ -330,7 +341,7 @@ export class AuthService {
 
     async signIn(username: string, pass: string){
       const user = await this.usersService.findOne(username);
-    
+  
       if (user?.password !== pass) {
         throw new UnauthorizedException();
       }
@@ -344,7 +355,8 @@ export class AuthService {
 
 Но если нужно где-то(снаружи auth module/controller/service) заинжектить JwtService от JwtService, надо обязательно заИМПОРТировать JwtModule.
 
-Например, гард мы вешаем на один из эндпоинтов контроллера Users.. значит в UsersModule нужно обязательно заИМПОРТировать JwtModule 
+Например, гард мы вешаем на один из эндпоинтов контроллера Users.. значит в UsersModule нужно обязательно заИМПОРТировать JwtModule
+
 ```javascript
 @Module({
   imports: [JwtModule],
@@ -364,7 +376,9 @@ export class UsersModule {}
 -- --
 
 ### Создание локального гарда, который будет проверять какие-то данные СО СТРАТЕГИЕЙ local
+
 1) создание local.strategy.ts
+
 ```javascript
 import { Strategy } from 'passport-local';
 import { PassportStrategy } from '@nestjs/passport';
@@ -386,7 +400,9 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
   }
 }
 ```
+
 2) создание local-auth.guard.ts
+
 ```javascript
 import { Injectable } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
@@ -395,7 +411,9 @@ import { AuthGuard } from '@nestjs/passport';
 @Injectable()
 export class LocalAuthGuard extends AuthGuard('local') {}
 ```
+
 3) в auth.module добавляем в imports и providers
+
 ```javascript
 @Module({
   imports: [..., PassportModule],
@@ -403,7 +421,9 @@ export class LocalAuthGuard extends AuthGuard('local') {}
 })
 export class AuthModule {}
 ```
+
 4) в контроллере используем гард
+
 ```javascript
 // Вариант 1 - в реквест кладет информацию о юзере (берет данные из @Body() data: LoginInput)
 // @UseGuards(AuthGuard('local')) 
@@ -423,6 +443,7 @@ async login(
 ```
 
 5) переопределение полей из Body в стратегии,так как они там по дефолту username и password
+
 ```javascript
 export class LocalStrategy extends PassportStrategy(Strategy) {
   constructor(private authService: AuthService
@@ -433,11 +454,13 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
 //...
 }
 ```
+
 <b>end commit</b> #2) simple local-guard with strategy
 
 -- --
 ### Создание JWT AUTH гарда, который будет проверять токен СО СТРАТЕГИЕЙ jwt
-т.к ранее уже был подключен import { JwtService } from '@nestjs/jwt';  и написана логика валидации и созданий accessToken, 
+
+т.к ранее уже был подключен import { JwtService } from '@nestjs/jwt';  и написана логика валидации и созданий accessToken,
 то используем то, что у нас уже есть в AuthService
 
 ```javascript
@@ -449,9 +472,12 @@ async login(user: any) {
   };
 }
 ```
+
 - так же есть подклбченный AuthConfigService с переменными (secret)
 - в authModule подклбчен JwtModule
+
 1) создание jwt.strategy.ts
+
 ```javascript
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
@@ -473,7 +499,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 }
 ```
+
 2) создание jwt-local-auth.guard.ts
+
 ```javascript
 import { Injectable } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
@@ -481,7 +509,8 @@ import { AuthGuard } from '@nestjs/passport';
 @Injectable()
 export class JwtLocalAuthGuard extends AuthGuard('jwt') {}
 ```
-3) Поключение стратегии в AuthModule 
+
+3) Поключение стратегии в AuthModule
 4) Использование Guard в контроллере
 
 Все аналогично local стратегии.
@@ -492,9 +521,11 @@ export class JwtLocalAuthGuard extends AuthGuard('jwt') {}
 
 -- --
 ### Создание BACIC AUTH гарда, который будет проверять токен СО СТРАТЕГИЕЙ 'basic'
+
 по аналогии с предыдущими случаями
 
 только в самой стратегии в validate функцию в параметры приходит первый параметр req
+
 ```javascript
   //basic.strategy.ts
   async validate(
@@ -510,10 +541,12 @@ export class JwtLocalAuthGuard extends AuthGuard('jwt') {}
   }
 }
 ```
+
 <b>end commit</b> #4) basic-guard with strategy
 
 -- --
 ## Validation (ValidationPipe)
+
 Для проверки входных данных от клиента (query, body) Экспортируется ValidationPipe из @nestjs/common пакета.
 
 ```javascript
@@ -544,9 +577,11 @@ create(@Body() createUserDto: UserData) {
   return 'This action adds a new user';
 }
 ```
+
 Теперь при запросе на Post запрос метода create приложение валидирует входящие данные относительно декораторов указанных в классе dto
 
 Если данные будут клиентом некорректно введены, то респнс клиенту будет следующий
+
 ```javascript
 {
   "statusCode": 400,
@@ -557,9 +592,11 @@ create(@Body() createUserDto: UserData) {
   "error": "Bad Request"
 }
 ```
+
 Обработка Respose - следующая тема
 
 так же можно валидировать и входящие параметры в Url
+
 ```javascript
 export class FindOneParams {
   @IsNumberString()
@@ -571,9 +608,11 @@ findOne(@Param() params: FindOneParams) {
   return 'This action returns a user';
 }
 ```
+
 Будет возвращена ошибка, если Id был не числоподобный :)
 
-А так же можно повесить индивидуальную валидацию на входящие данные 
+А так же можно повесить индивидуальную валидацию на входящие данные
+
 ```javascript
 @Param('id', ParseIntPipe) id: number,
 @Query('sort', ParseBoolPipe) sort: boolean
@@ -583,11 +622,231 @@ findOne(@Param() params: FindOneParams) {
 @ParseArrayPipe
 @ParseUUIDPipe
 ```
+
+Т.е должен быть проверяющий декоратор. Если его нет, папйп не проверит, корректно
+на квери параментры нужно вешать либо классы с декораторами, что будет работать предсказуемо по вышенаписанному сценарию, либо локальные пайпы, но тогда ошибки уйдут в global exeptionFilter
+
+если мы хотим обработать ошибки уникально, с помощью своего DomainFilterException, то нужно добавить функцию в описании подключения пайпа
+
+```javascript
+ app.useGlobalPipes(
+    //new ObjectIdTransformationPipe(), todo
+    new ValidationPipe({
+      transform: true,
+      whitelist: true, // валидатор удалит из проверенного (возвращенного) объекта все свойства, которые не используют какие-либо декораторы валидации.
+      stopAtFirstError: true, //Выдавать первую ошибку для каждого поля
+
+      exceptionFactory: (errors) => {
+        const formattedErrors: Extension[] = [];
+
+        //функция, если в определенном формате нам надо выводить ошибки
+        //...
+
+        throw new DomainException({
+          code: DomainExceptionCode.ValidationError,
+          message: 'Validation failed',
+          extensions: formattedErrors,
+        });
+      },
+    }),
+  );
+
+  console.log('process.env.PORT :', appConfig.PORT);
+  await app.listen(appConfig.PORT);
+}
+```
+Так же можно написать логику своего кастомного пайпа, который будет не только проверять на ObjectId, но и трансформировать
+```javascript
+async updateUser(
+@Param('id', ObjectIdValidationTransformationPipe) id: Types.ObjectId,
+@Body() body: UpdateUserInput,
+): Promise<UserOutput> {
+  //...
+}
+```
+```javascript
+@Injectable()
+export class ObjectIdValidationTransformationPipe implements PipeTransform {
+  transform(value: any) {
+    if (Types.ObjectId.isValid(value)) {
+      return new Types.ObjectId(value);
+    }
+    throw new DomainException({
+      code: DomainExceptionCode.ValidationError,
+      message: `Invalid ObjectId: ${value}`,
+    });
+  }
+}
+```
+Ошибка будет падать сразу в AllExceptionFilter, так как жто локальный фильтр (не в globalPipe exception)
 <b>end commit</b> #1) basic ValidationPipe
 
--- --
+---
 
-создание глобального пайпа, который проверяет входные данные id: Types.ObjectId, чтобы провалидировать 
+## ExceptionsFilters (user entity)
+
+---
+
+## Mongoose (user entity)
+
+```javascript
+pnpm add @nestjs/mongoose mongoose
+```
+
+1) подключение
+   1.1) базовое:
+
+```javascript
+@Module({
+  imports: [
+    MongooseModule.forRoot('mongodb://localhost/nest-blogger-platform'), // Укажите свой URL MongoDB
+    UserAccountsModule,
+  ],
+})
+export class AppModule {}
+```
+
+1.2) с использование перменных окружения (env-configuration branch)
+
+```javascript
+@Module({
+  imports: [
+    //...
+    MongooseModule.forRootAsync({
+      useFactory: (appConfigService: AppConfigService) => ({
+        uri: appConfigService.MONGO_URI, //что бы appConfigService не был undefined, мы его инжектим ниже
+      }),
+      inject: [AppConfigService], //инжектим здесь
+    }),
+  //...
+  ],
+  controllers: [AppController],
+  providers: [AppService],
+  exports: [],
+})
+```
+
+2) Создание схемы
+
+```javascript
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { HydratedDocument, Model } from 'mongoose';
+import { Name, NameSchema } from './name.schema';
+import { CreateUserDomainDto } from './dto/create-user.domain.dto';
+import { UpdateUserInput } from '../dto/input/update-user.input';
+
+//флаг timestemp автоматичеки добавляет поля upatedAt и createdAt
+@Schema({ timestamps: true })
+export class User {
+  createdAt: Date;
+  updatedAt: Date;
+
+  @Prop({ type: String, required: true })
+  login: string;
+
+  @Prop({ type: String, required: true })
+  password: string;
+
+  @Prop({
+    type: String,
+    required: true,
+    match: /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/,
+  })
+  email: string;
+
+  @Prop({ type: NameSchema })
+  name: Name;
+
+  @Prop({ type: Date, nullable: true })
+  deletedAt: Date | null;
+
+  //метод-фабрика. Создает объект, но не сохраняет в бд! обращаться надо напрямую к Model
+  static createInstance(dto: CreateUserDomainDto): UserDocument {
+    const user = new this();
+    user.email = dto.email;
+    user.password = dto.pass;
+    user.login = dto.login;
+
+    user.name = {
+      firstName: 'firstName xxx',
+      lastName: 'lastName yyy',
+    };
+
+    return user as UserDocument;
+  }
+
+  //метод, который можно вызвать у полученного инстанса (не напрямую к Model), но не сохраняет в бд!
+  makeDeleted() {
+    if (this.deletedAt !== null) {
+      throw new Error('Entity already deleted');
+    }
+    this.deletedAt = new Date();
+  }
+
+  //метод, который можно выззвать у полученного инстанса (не напрямую к Model), но не сохраняет в бд!
+  update(dto: UpdateUserInput) {
+    if (dto.email !== this.email) {
+      this.email = dto.email;
+    }
+  }
+}
+//создает схему на основе класса
+export const UserSchema = SchemaFactory.createForClass(User);
+
+//регистрирует методы сущности в схеме
+UserSchema.loadClass(User);
+
+//Типизация документа
+export type UserDocument = HydratedDocument<User>;
+
+//Типизация модели + статические методы
+export type UserModelType = Model<UserDocument> & typeof User;
+```
+
+3) Подключение схемы
+
+```javascript
+@Module({
+  imports: [
+    JwtModule,
+    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+  ],
+  controllers: [UsersController],
+  providers: [UsersService, UsersRepository, UsersQueryRepository],
+  exports: [UsersService],
+})
+export class UsersModule {}
+```
+
+4) Использование схемы в репозитории, сервисе
+5) Добавление UsersQueryRepository для query запросов
+6) Не забываем, что у нас стоит в папйпе условие проверять входящие данные и декораторы в них обязательны, иначе данных не видно
+   <b>end commit</b> mongoose (integration to user entity)
+
+---
+
+## Decorator IsStringWithTrim (branch `decorators`)
+
+```javascript
+//creating of custom decorator
+export const IsStringWithTrim = (minLength: number, maxLength: number) =>
+  applyDecorators(
+    IsString(),
+    Length(minLength, maxLength),
+
+    Transform(({ value }: TransformFnParams) => {
+      return typeof value === 'string' ? value.trim() : value;
+    }),
+  );
+
+//use it into dto
+@IsStringWithTrim(3, 20) //проверит + удалит пробелы
+email: string;
+```
+
+<b>end commit</b> decorator IsStringWithTrim
+
+---
 
 -- --
 

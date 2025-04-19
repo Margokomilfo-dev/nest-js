@@ -125,17 +125,16 @@ export class UsersController {
   @ApiParam({ name: 'id', type: 'string' })
   @Put(':id')
   async updateUser(
-    @Param('id', IsObjectIdPipe) id: string,
-    @Body() body: UpdateUserInput,
-  ): Promise<UserOutput> {
-    const userId = await this.userService.updateUser(id, body);
-    return this.usersQueryRepository.findOrNotFoundFail(userId);
+    @Param('id', ObjectIdValidationTransformationPipe) id: Types.ObjectId,
+    @Body() body: UserData,
+  ) {
+    console.log('id:', id);
   }
 
   @ApiParam({ name: 'id' }) //для сваггера
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteUser(@Param('id', IsObjectIdPipe) id: string): Promise<void> {
+  async deleteUser(@Param('id', ParseIntPipe) id: number): Promise<void> {
     console.log(id);
     return;
     //this.usersService.deleteUser(id.id);
