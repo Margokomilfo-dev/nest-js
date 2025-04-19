@@ -685,6 +685,176 @@ export class ObjectIdValidationTransformationPipe implements PipeTransform {
 
 ## ExceptionsFilters (user entity)
 
+Для того, чтобы отлавливать ошибки и упаковоывать их в свой вариант ответа, можно написать свои кастомные филтры (DomainFilter)... либо оптимизировать дефолтные (например, allExceptionFilter)
+
+Создадим класс, с помощью которого мы будем генерировать нужный ответ
+```javascript
+export class DomainException extends Error {
+   message: string;
+   code: DomainExceptionCode;
+   extensions: Extension[];
+
+   constructor(errorInfo: {
+      code: DomainExceptionCode;
+      message: string;
+      extensions?: Extension[];
+   }) {
+      super(errorInfo.message);
+      this.message = errorInfo.message;
+      this.code = errorInfo.code;
+      this.extensions = errorInfo.extensions || [];
+   }
+}
+```
+а так же напишем два фильтра, один - новый, другой - модификация "подкапотного"
+
+```javascript
+@Catch()
+//модификация подкапотного - всегда будет срабатывать при catch 
+export class AllHttpExceptionsFilter implements ExceptionFilter {
+   catch(exception: any, host: ArgumentsHost): void {
+      console.log('in ALL EXCEPTIONS FILTER');
+      //ctx нужен, чтобы получить request и response (express). Это из документации, делаем по аналогии
+      const ctx = host.switchToHttp();
+      const response = ctx.getResponse<Response>();
+      const request = ctx.getRequest<Request>();
+
+      //Если сработал этот фильтр, то пользователю улетит 500я ошибка
+      const message = exception.message || 'Unknown exception occurred.';
+      const status = HttpStatus.INTERNAL_SERVER_ERROR;
+      const responseBody = this.buildResponseBody(request.url, message);
+
+      response.status(status).json(responseBody);
+   }
+
+   private buildResponseBody(
+           requestUrl: string,
+           message: string,
+   ): ErrorResponseBody {
+      //TODO: Replace with getter from configService. will be in the following lessons
+      const isProduction = process.env.NODE_ENV === 'production';
+
+      if (isProduction) {
+         return {
+            timestamp: new Date().toISOString(),
+            path: null,
+            message: 'Some error occurred',
+            extensions: [],
+            code: DomainExceptionCode.InternalServerError,
+         };
+      }
+
+      return {
+         timestamp: new Date().toISOString(),
+         path: requestUrl,
+         message,
+         extensions: [],
+         code: DomainExceptionCode.InternalServerError,
+      };
+   }
+}
+```
+```javascript
+//Ошибки класса DomainException (instanceof DomainException)
+@Catch(DomainException)
+export class DomainHttpExceptionsFilter implements ExceptionFilter {
+   catch(exception: DomainException, host: ArgumentsHost): void {
+      const ctx = host.switchToHttp();
+      const response = ctx.getResponse<Response>();
+      const request = ctx.getRequest<Request>();
+
+      const status = this.mapToHttpStatus(exception.code);
+      const responseBody = this.buildResponseBody(exception, request.url);
+
+      response.status(status).json(responseBody);
+   }
+
+   private mapToHttpStatus(code: DomainExceptionCode): number {
+      switch (code) {
+         case DomainExceptionCode.BadRequest:
+         case DomainExceptionCode.ValidationError:
+         case DomainExceptionCode.ConfirmationCodeExpired:
+         case DomainExceptionCode.EmailNotConfirmed:
+         case DomainExceptionCode.PasswordRecoveryCodeExpired:
+            return HttpStatus.BAD_REQUEST;
+         case DomainExceptionCode.Forbidden:
+            return HttpStatus.FORBIDDEN;
+         case DomainExceptionCode.NotFound:
+            return HttpStatus.NOT_FOUND;
+         case DomainExceptionCode.Unauthorized:
+            return HttpStatus.UNAUTHORIZED;
+         case DomainExceptionCode.InternalServerError:
+            return HttpStatus.INTERNAL_SERVER_ERROR;
+         default:
+            return HttpStatus.I_AM_A_TEAPOT;
+      }
+   }
+
+   private buildResponseBody(
+           exception: DomainException,
+           requestUrl: string,
+   ): ErrorResponseBody {
+      return {
+         timestamp: new Date().toISOString(),
+         path: requestUrl,
+         message: exception.message,
+         code: exception.code,
+         extensions: exception.extensions,
+      };
+   }
+}
+
+export type ErrorResponseBody = {
+   timestamp: string;
+   path: string | null;
+   message: string;
+   extensions: Extension[];
+   code: DomainExceptionCode;
+};
+```
+Останется теперб их только подключить к приложению
+```javascript
+@Module({
+  imports: [
+    ...configModules,
+    AuthModule,
+    MongooseModule.forRootAsync({
+      useFactory: (appConfigService: AppConfigService) => ({
+        uri: appConfigService.MONGO_URI, //что бы appConfigService не был undefined, мы его инжектим ниже
+      }),
+      inject: [AppConfigService], //инжектим здесь
+    }),
+    PostsModule,
+    BlogsModule,
+    UsersModule,
+  ],
+  controllers: [AppController],
+  providers: [
+    AppService,
+    //регистрация глобальных exception filters
+    //важен порядок регистрации! Первым сработает DomainHttpExceptionsFilter!
+    {
+      provide: APP_FILTER,
+      useClass: AllHttpExceptionsFilter,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: DomainHttpExceptionsFilter,
+    },
+  ],
+  exports: [],
+})
+export class AppModule {}
+```
+Теперь чтобы получить ответ в должном виде, в приложение стоит только отправить ошибку следущим образом:
+
+```javascript
+ throw new DomainException({
+   code: DomainExceptionCode.ValidationError,
+   message: 'Validation failed',
+   extensions: formattedErrors,
+});
+```
 ---
 
 ## Mongoose (user entity)
@@ -844,156 +1014,6 @@ export const IsStringWithTrim = (minLength: number, maxLength: number) =>
 email: string;
 ```
 
-<b>end commit</b> decorator IsStringWithTrim
-
----
-
--- --
-
-## Mongoose (user entity)
-```javascript
-pnpm add @nestjs/mongoose mongoose
-```
-1) подключение
-1.1) базовое: 
-```javascript
-@Module({
-  imports: [
-    MongooseModule.forRoot('mongodb://localhost/nest-blogger-platform'), // Укажите свой URL MongoDB
-    UserAccountsModule,
-  ],
-})
-export class AppModule {}
-```
-1.2) с использование перменных окружения (env-configuration branch)
-```javascript
-@Module({
-  imports: [
-    //...
-    MongooseModule.forRootAsync({
-      useFactory: (appConfigService: AppConfigService) => ({
-        uri: appConfigService.MONGO_URI, //что бы appConfigService не был undefined, мы его инжектим ниже
-      }),
-      inject: [AppConfigService], //инжектим здесь
-    }),
-  //...
-  ],
-  controllers: [AppController],
-  providers: [AppService],
-  exports: [],
-})
-```
-2) Создание схемы
-```javascript
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Model } from 'mongoose';
-import { Name, NameSchema } from './name.schema';
-import { CreateUserDomainDto } from './dto/create-user.domain.dto';
-import { UpdateUserInput } from '../dto/input/update-user.input';
-
-//флаг timestemp автоматичеки добавляет поля upatedAt и createdAt
-@Schema({ timestamps: true })
-export class User {
-  createdAt: Date;
-  updatedAt: Date;
-
-  @Prop({ type: String, required: true })
-  login: string;
-
-  @Prop({ type: String, required: true })
-  password: string;
-
-  @Prop({
-    type: String,
-    required: true,
-    match: /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/,
-  })
-  email: string;
-
-  @Prop({ type: NameSchema })
-  name: Name;
-
-  @Prop({ type: Date, nullable: true })
-  deletedAt: Date | null;
-
-  //метод-фабрика. Создает объект, но не сохраняет в бд! обращаться надо напрямую к Model
-  static createInstance(dto: CreateUserDomainDto): UserDocument {
-    const user = new this();
-    user.email = dto.email;
-    user.password = dto.pass;
-    user.login = dto.login;
-
-    user.name = {
-      firstName: 'firstName xxx',
-      lastName: 'lastName yyy',
-    };
-
-    return user as UserDocument;
-  }
-
-  //метод, который можно вызвать у полученного инстанса (не напрямую к Model), но не сохраняет в бд!
-  makeDeleted() {
-    if (this.deletedAt !== null) {
-      throw new Error('Entity already deleted');
-    }
-    this.deletedAt = new Date();
-  }
-
-  //метод, который можно выззвать у полученного инстанса (не напрямую к Model), но не сохраняет в бд!
-  update(dto: UpdateUserInput) {
-    if (dto.email !== this.email) {
-      this.email = dto.email;
-    }
-  }
-}
-//создает схему на основе класса
-export const UserSchema = SchemaFactory.createForClass(User);
-
-//регистрирует методы сущности в схеме
-UserSchema.loadClass(User);
-
-//Типизация документа
-export type UserDocument = HydratedDocument<User>;
-
-//Типизация модели + статические методы
-export type UserModelType = Model<UserDocument> & typeof User;
-```
-3) Подключение схемы 
-```javascript
-@Module({
-  imports: [
-    JwtModule,
-    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
-  ],
-  controllers: [UsersController],
-  providers: [UsersService, UsersRepository, UsersQueryRepository],
-  exports: [UsersService],
-})
-export class UsersModule {}
-```
-4) Использование схемы в репозитории, сервисе 
-5) Добавление UsersQueryRepository для query запросов
-6) Не забываем, что у нас стоит в папйпе условие проверять входящие данные и декораторы в них обязательны, иначе данных не видно
-<b>end commit</b> mongoose (integration to user entity)
-
--- --
-## Decorator IsStringWithTrim (branch `decorators`)
-```javascript
-//creating of custom decorator
-export const IsStringWithTrim = (minLength: number, maxLength: number) =>
-  applyDecorators(
-    IsString(),
-    Length(minLength, maxLength),
-
-    Transform(({ value }: TransformFnParams) => {
-      return typeof value === 'string' ? value.trim() : value;
-    }),
-  );
-
-//use it into dto
-@IsStringWithTrim(3, 20) //проверит + удалит пробелы
-email: string;
-```
 <b>end commit</b> decorator IsStringWithTrim
 
 -- --

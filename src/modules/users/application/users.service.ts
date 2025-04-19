@@ -27,8 +27,11 @@ export class UsersService {
     await this.usersRepository.save(user);
   }
 
-  async updateUser(id: string, dto: UpdateUserInput): Promise<Types.ObjectId> {
-    const user = await this.usersRepository.findOrNotFoundFail(id);
+  async updateUser(
+    id: Types.ObjectId,
+    dto: UpdateUserInput,
+  ): Promise<Types.ObjectId> {
+    const user = await this.usersRepository.findOrNotFoundFail(id.toString());
 
     user.update(dto);
 

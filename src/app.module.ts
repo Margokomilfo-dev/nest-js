@@ -41,6 +41,8 @@ const configModules = [
   controllers: [AppController],
   providers: [
     AppService,
+    //регистрация глобальных exception filters
+    //важен порядок регистрации! Первым сработает DomainHttpExceptionsFilter!
     {
       provide: APP_FILTER,
       useClass: AllHttpExceptionsFilter,
